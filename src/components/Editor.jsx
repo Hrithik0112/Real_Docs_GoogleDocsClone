@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import React, { useEffect, useRef } from "react";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
+import { io } from "socket.io-client";
 
 const toolbarOptions = [
   ["bold", "italic", "underline", "strike"], // toggled buttons
@@ -36,6 +37,14 @@ const Editor = () => {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const socket = io("http://localhost:5000");
+
+    return () => {
+      socket.disconnect();
+    };
+  });
   return <Box id="container"></Box>;
 };
 
