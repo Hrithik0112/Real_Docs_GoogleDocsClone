@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import { io } from "socket.io-client";
@@ -25,7 +25,10 @@ const toolbarOptions = [
 ];
 
 const Editor = () => {
+  const [socket, setSocket] = useState();
+  const [quill, setQuill] = useState();
   const shouldLog = useRef(true);
+
   useEffect(() => {
     if (shouldLog.current) {
       shouldLog.current = false;
@@ -35,16 +38,44 @@ const Editor = () => {
           toolbar: toolbarOptions,
         },
       });
+      setQuill(quillserver);
     }
   }, []);
 
   useEffect(() => {
-    const socket = io("http://localhost:5000");
+    const socketServer = io("http://localhost:5000");
+    setSocket(socketServer);
 
     return () => {
-      socket.disconnect();
+      socketServer.disconnect();
     };
-  });
+  }, []);
+
+  useEffect(() => {
+    if (socket === null || quill === null) return;
+    const handleChange = (delta, oldDelta, source) => {
+      if (source !== "user") return;
+      socket && socket.emit("send-changes", delta);
+    };
+    quill && quill.on("text-change", handleChange);
+
+    return () => {
+      quill && quill.off("text-changes", handleChange);
+    };
+  }, [socket, quill]);
+
+  useEffect(() => {
+    if (socket === null || quill === null) return;
+    const handleChange = (delta) => {
+      quill.updateContents(delta);
+    };
+    socket && socket.on("recieve-changes", handleChange);
+
+    return () => {
+      socket && socket.off("recieve-changes", handleChange);
+    };
+  }, [socket, quill]);
+
   return <Box id="container"></Box>;
 };
 
