@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import { io } from "socket.io-client";
+import { useParams } from "react-router-dom";
 
 const toolbarOptions = [
   ["bold", "italic", "underline", "strike"], // toggled buttons
@@ -28,6 +29,7 @@ const Editor = () => {
   const [socket, setSocket] = useState();
   const [quill, setQuill] = useState();
   const shouldLog = useRef(true);
+  const { id } = useParams();
 
   useEffect(() => {
     if (shouldLog.current) {
@@ -38,6 +40,8 @@ const Editor = () => {
           toolbar: toolbarOptions,
         },
       });
+      quillserver.disable();
+      quillserver.setText("Loading The Document.....");
       setQuill(quillserver);
     }
   }, []);
@@ -75,6 +79,18 @@ const Editor = () => {
       socket && socket.off("recieve-changes", handleChange);
     };
   }, [socket, quill]);
+
+  useEffect(() => {
+    if (socket === null || quill === null) return;
+
+    socket &&
+      socket.once("load-document", (document) => {
+        quill && quill.setContents(document);
+        quill && quill.enable();
+      });
+
+    socket && socket.emit("get-document", id);
+  }, [quill, socket, id]);
 
   return <Box id="container"></Box>;
 };
